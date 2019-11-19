@@ -1,41 +1,52 @@
-import React, {createContext, useState, FC} from 'react';
+import React, {createContext, useState, FC, useEffect} from 'react';
 import {ThemeMode, ThemeContext} from '../types';
 import {StatusBar} from 'react-native';
 import {ThemeProvider} from 'styled-components/native';
-import {Appearance, useColorScheme} from 'react-native-appearance';
+// @ts-ignore
+import {Appearance, AppearanceProvider} from 'react-native-appearance';
 import lightTheme from '../themes/light';
 import darkTheme from '../themes/dark';
 
+// Get OS default mode or default to 'light'
 const defaultMode = Appearance.getColorScheme() || 'light';
 
+// Create ManageThemeContext which will hold the current mode and a function to change it
 const ManageThemeContext = createContext<ThemeContext>({
   mode: defaultMode,
   setMode: mode => console.log(mode),
 });
 
+// Export a helper function to easily use the Context
 export const useTheme = () => React.useContext(ManageThemeContext);
 
+// Create  the Provider
 const ManageThemeProvider: FC = ({children}) => {
-  const colorScheme = useColorScheme();
-
-  const [themeState, setThemeState] = useState({
-    mode: colorScheme,
-  });
+  const [themeState, setThemeState] = useState(defaultMode);
 
   const setMode = (mode: ThemeMode) => {
-    setThemeState({mode});
+    setThemeState(mode);
   };
 
+  // Subscribe to OS mode changes
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(
+      ({colorScheme}: {colorScheme: ThemeMode}) => {
+        setThemeState(colorScheme);
+      },
+    );
+    return () => subscription.remove();
+  }, []);
+
+  // Return a component which wraps its children in a styled-component ThemeProvider,
+  // sets the status bar color, and injects the current mode and a function to change it
   return (
     <ManageThemeContext.Provider
-      value={{mode: themeState.mode as ThemeMode, setMode}}>
+      value={{mode: themeState as ThemeMode, setMode}}>
       <ThemeProvider
-        theme={themeState.mode === 'dark' ? darkTheme.theme : lightTheme.theme}>
+        theme={themeState === 'dark' ? darkTheme.theme : lightTheme.theme}>
         <>
           <StatusBar
-            barStyle={
-              themeState.mode === 'dark' ? 'light-content' : 'dark-content'
-            }
+            barStyle={themeState === 'dark' ? 'light-content' : 'dark-content'}
           />
           {children}
         </>
@@ -44,12 +55,11 @@ const ManageThemeProvider: FC = ({children}) => {
   );
 };
 
-const ManageThemeProviderWrapper = () => {
-  <Appearance>
-    <ManageThemeProvider />
-  </Appearance>;
-};
+// This wrapper is needed to add the ability to subscribe to OS mode changes
+const ManageThemeProviderWrapper: FC = ({children}) => (
+  <AppearanceProvider>
+    <ManageThemeProvider>{children}</ManageThemeProvider>
+  </AppearanceProvider>
+);
 
-export {ManageThemeContext, ManageThemeProvider};
-
-export default ManageThemeProvider;
+export default ManageThemeProviderWrapper;

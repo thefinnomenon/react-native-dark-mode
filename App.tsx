@@ -1,11 +1,12 @@
-import React, {useContext} from 'react';
+import React from 'react';
 import {Theme} from './types';
 import styled from 'styled-components/native';
-import ThemeManager, {ManageThemeContext} from './contexts/ManageThemeContext';
+import ThemeManager, {useTheme} from './contexts/ManageThemeContext';
 import {Switch} from 'react-native';
 
 const Home = () => {
-  const theme = useContext(ManageThemeContext);
+  // Helper function => useContext(ManageThemeContext)
+  const theme = useTheme();
   return (
     <Container>
       <Switch
@@ -16,6 +17,7 @@ const Home = () => {
   );
 };
 
+// Get the background color from the theme object
 const Container = styled.View<Theme>`
   flex: 1;
   justify-content: center;
@@ -23,6 +25,8 @@ const Container = styled.View<Theme>`
   background: ${props => props.theme.background};
 `;
 
+// Wrap Home in the ThemeManager so it can access the current theme and
+// the function to update it
 const App = () => (
   <ThemeManager>
     <Home />
